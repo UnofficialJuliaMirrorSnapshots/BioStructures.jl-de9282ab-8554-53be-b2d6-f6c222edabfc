@@ -34,10 +34,12 @@ julia> mmcif_dict = MMCIFDict("/path/to/cif/file.cif")
 mmCIF dictionary with 716 fields
 
 julia> mmcif_dict["_entity_src_nat.common_name"]
-"great nettle"
+1-element Array{String,1}:
+ "great nettle"
 ```
 
 A `MMCIFDict` can be accessed in similar ways to a standard dictionary, and if necessary the underlying dictionary of `MMCIFDict` `d` can be accessed with `d.dict`.
+Note that the elements of the dictionary are always an `Array{String,1}`, even if only one value was read in or the data is numerical.
 
 Refer to [Downloading PDB files](#Downloading-PDB-files-1) and [Reading PDB files](#Reading-PDB-files-1) sections for more options.
 
@@ -63,43 +65,46 @@ See the [Biopython discussion](http://biopython.org/wiki/The_Biopython_Structura
 
 Properties can be retrieved as follows:
 
-| Function           | Returns                                                       | Return type                     |
-| :----------------- | :------------------------------------------------------------ | :------------------------------ |
-| `serial`           | Serial number of an atom                                      | `Int`                           |
-| `atomname`         | Name of an atom                                               | `String`                        |
-| `altlocid`         | Alternative location ID of an atom                            | `Char`                          |
-| `x`                | x coordinate of an atom                                       | `Float64`                       |
-| `y`                | y coordinate of an atom                                       | `Float64`                       |
-| `z`                | z coordinate of an atom                                       | `Float64`                       |
-| `coords`           | coordinates of an atom                                        | `Array{Float64,1}`              |
-| `occupancy`        | Occupancy of an atom (default is `1.0`)                       | `Float64`                       |
-| `tempfactor`       | Temperature factor of an atom (default is `0.0`)              | `Float64`                       |
-| `element`          | Element of an atom (default is `"  "`)                        | `String`                        |
-| `charge`           | Charge of an atom (default is `"  "`)                         | `String`                        |
-| `residue`          | Residue an atom belongs to                                    | `Residue`                       |
-| `ishetero`         | `true` if the residue or atom is a hetero residue/atom        | `Bool`                          |
-| `isdisorderedatom` | `true` if the atom is disordered                              | `Bool`                          |
-| `pdbline`          | PDB ATOM/HETATM record for an atom                            | `String`                        |
-| `resname`          | Residue name of a residue or atom                             | `String`                        |
-| `resnumber`        | Residue number of a residue or atom                           | `Int`                           |
-| `inscode`          | Insertion code of a residue or atom                           | `Char`                          |
-| `resid`            | Residue ID of an atom or residue (`full=true` includes chain) | `String`                        |
-| `atomnames`        | Atom names of the atoms in a residue, sorted by serial        | `Array{String,1}`               |
-| `atoms`            | Dictionary of atoms in a residue                              | `Dict{String, AbstractAtom}`    |
-| `isdisorderedres`  | `true` if the residue has multiple residue names              | `Bool`                          |
-| `disorderedres`    | Access a particular residue name in a `DisorderedResidue`     | `Residue`                       |
-| `chain`            | Chain a residue or atom belongs to                            | `Chain`                         |
-| `chainid`          | Chain ID of a chain, residue or atom                          | `String`                        |
-| `resids`           | Sorted residue IDs in a chain                                 | `Array{String,1}`               |
-| `residues`         | Dictionary of residues in a chain                             | `Dict{String, AbstractResidue}` |
-| `model`            | Model a chain, residue or atom belongs to                     | `Model`                         |
-| `modelnumber`      | Model number of a model, chain, residue or atom               | `Int`                           |
-| `chainids`         | Sorted chain IDs in a model or structure                      | `Array{String,1}`               |
-| `chains`           | Dictionary of chains in a model or structure                  | `Dict{String, Chain}`           |
-| `structure`        | Structure a model, chain, residue or atom belongs to          | `ProteinStructure`              |
-| `structurename`    | Name of the structure an element belongs to                   | `String`                        |
-| `modelnumbers`     | Sorted model numbers in a structure                           | `Array{Int,1}`                  |
-| `models`           | Dictionary of models in a structure                           | `Dict{Int, Model}`              |
+| Function             | Returns                                                       | Return type                     |
+| :------------------- | :------------------------------------------------------------ | :------------------------------ |
+| `serial`             | Serial number of an atom                                      | `Int`                           |
+| `atomname`           | Name of an atom                                               | `String`                        |
+| `altlocid`           | Alternative location ID of an atom                            | `Char`                          |
+| `altlocids`          | All alternative location IDs in a `DisorderedAtom`            | `Array{Char,1}`                 |
+| `x`                  | x coordinate of an atom                                       | `Float64`                       |
+| `y`                  | y coordinate of an atom                                       | `Float64`                       |
+| `z`                  | z coordinate of an atom                                       | `Float64`                       |
+| `coords`             | coordinates of an atom                                        | `Array{Float64,1}`              |
+| `occupancy`          | Occupancy of an atom (default is `1.0`)                       | `Float64`                       |
+| `tempfactor`         | Temperature factor of an atom (default is `0.0`)              | `Float64`                       |
+| `element`            | Element of an atom (default is `"  "`)                        | `String`                        |
+| `charge`             | Charge of an atom (default is `"  "`)                         | `String`                        |
+| `residue`            | Residue an atom belongs to                                    | `Residue`                       |
+| `ishetero`           | `true` if the residue or atom is a hetero residue/atom        | `Bool`                          |
+| `isdisorderedatom`   | `true` if the atom is disordered                              | `Bool`                          |
+| `pdbline`            | PDB ATOM/HETATM record for an atom                            | `String`                        |
+| `resname`            | Residue name of a residue or atom                             | `String`                        |
+| `resnames`           | All residue names in a `DisorderedResidue`                    | `Array{String,1}`               |
+| `resnumber`          | Residue number of a residue or atom                           | `Int`                           |
+| `sequentialresidues` | Determine if the second residue follows the first in sequence | `Bool`                          |
+| `inscode`            | Insertion code of a residue or atom                           | `Char`                          |
+| `resid`              | Residue ID of an atom or residue (`full=true` includes chain) | `String`                        |
+| `atomnames`          | Atom names of the atoms in a residue, sorted by serial        | `Array{String,1}`               |
+| `atoms`              | Dictionary of atoms in a residue                              | `Dict{String, AbstractAtom}`    |
+| `isdisorderedres`    | `true` if the residue has multiple residue names              | `Bool`                          |
+| `disorderedres`      | Access a particular residue name in a `DisorderedResidue`     | `Residue`                       |
+| `chain`              | Chain a residue or atom belongs to                            | `Chain`                         |
+| `chainid`            | Chain ID of a chain, residue or atom                          | `String`                        |
+| `resids`             | Sorted residue IDs in a chain                                 | `Array{String,1}`               |
+| `residues`           | Dictionary of residues in a chain                             | `Dict{String, AbstractResidue}` |
+| `model`              | Model a chain, residue or atom belongs to                     | `Model`                         |
+| `modelnumber`        | Model number of a model, chain, residue or atom               | `Int`                           |
+| `chainids`           | Sorted chain IDs in a model or structure                      | `Array{String,1}`               |
+| `chains`             | Dictionary of chains in a model or structure                  | `Dict{String, Chain}`           |
+| `structure`          | Structure a model, chain, residue or atom belongs to          | `ProteinStructure`              |
+| `structurename`      | Name of the structure an element belongs to                   | `String`                        |
+| `modelnumbers`       | Sorted model numbers in a structure                           | `Array{Int,1}`                  |
+| `models`             | Dictionary of models in a structure                           | `Dict{Int, Model}`              |
 
 The `strip` keyword argument determines whether surrounding whitespace is stripped for `atomname`, `element`, `charge`, `resname` and `atomnames` (default `true`).
 
@@ -172,7 +177,7 @@ Alternatively, you can use an anonymous function:
 collectatoms(struc, at -> x(at) < 0)
 ```
 
-`countatoms`, `countresidues`, `countchains` and `countmodels` can be used to count elements wth the same selector API.
+`countatoms`, `countresidues`, `countchains` and `countmodels` can be used to count elements with the same selector API.
 For example:
 
 ```julia
@@ -201,24 +206,25 @@ See [BioSequences.jl](https://github.com/BioJulia/BioSequences.jl) for more on h
 
 Various functions are provided to calculate spatial quantities for proteins:
 
-| Command              | Returns                                                                                         |
-| :------------------- | :---------------------------------------------------------------------------------------------- |
-| `distance`           | Minimum distance between two elements                                                           |
-| `sqdistance`         | Minimum square distance between two elements                                                    |
-| `bondangle`          | Angle between three atoms                                                                       |
-| `dihedralangle`      | Dihedral angle defined by four atoms                                                            |
-| `omegaangle`         | Omega dihedral angle between a residue and the previous residue                                 |
-| `phiangle`           | Phi dihedral angle between a residue and the previous residue                                   |
-| `psiangle`           | Psi dihedral angle between a residue and the next residue                                       |
-| `omegaangles`        | `Vector` of omega dihedral angles of an element                                                 |
-| `phiangles`          | `Vector` of phi dihedral angles of an element                                                   |
-| `psiangles`          | `Vector` of psi dihedral angles of an element                                                   |
-| `ramachandranangles` | `Vector`s of phi and psi angles of an element                                                   |
-| `ContactMap`         | `ContactMap` of two elements, or one element with itself                                        |
-| `DistanceMap`        | `DistanceMap` of two elements, or one element with itself                                       |
-| `showcontactmap`     | Print a representation of a `ContactMap` to `stdout` or a specified `IO` instance               |
-| `rmsd`               | RMSD between two elements of the same size - assumes they are superimposed                      |
-| `displacements`      | `Vector` of displacements between two elements of the same size - assumes they are superimposed |
+| Command              | Returns                                                                                          |
+| :------------------- | :----------------------------------------------------------------------------------------------- |
+| `distance`           | Minimum distance between two elements                                                            |
+| `sqdistance`         | Minimum square distance between two elements                                                     |
+| `coordarray`         | Atomic coordinates in Å of an element as a 2D `Array` with each column corresponding to one atom |
+| `bondangle`          | Angle between three atoms                                                                        |
+| `dihedralangle`      | Dihedral angle defined by four atoms                                                             |
+| `omegaangle`         | Omega dihedral angle between a residue and the previous residue                                  |
+| `phiangle`           | Phi dihedral angle between a residue and the previous residue                                    |
+| `psiangle`           | Psi dihedral angle between a residue and the next residue                                        |
+| `omegaangles`        | `Vector` of omega dihedral angles of an element                                                  |
+| `phiangles`          | `Vector` of phi dihedral angles of an element                                                    |
+| `psiangles`          | `Vector` of psi dihedral angles of an element                                                    |
+| `ramachandranangles` | `Vector`s of phi and psi angles of an element                                                    |
+| `ContactMap`         | `ContactMap` of two elements, or one element with itself                                         |
+| `DistanceMap`        | `DistanceMap` of two elements, or one element with itself                                        |
+| `showcontactmap`     | Print a representation of a `ContactMap` to `stdout` or a specified `IO` instance                |
+| `rmsd`               | RMSD between two elements of the same size - assumes they are superimposed                       |
+| `displacements`      | `Vector` of displacements between two elements of the same size - assumes they are superimposed  |
 
 The `omegaangle`, `phiangle` and `psiangle` functions can take either a pair of residues or a chain and a position.
 The `omegaangle` and `phiangle` functions measure the angle between the residue at the given index and the one before.
@@ -414,6 +420,8 @@ julia> pdbline(AtomRecord(false, 669, "CA", ' ', "ILE", "A", 90, ' ', [31.743, 3
 "ATOM    669  CA  ILE A  90      31.743  33.110  31.221  1.00 25.76           C  "
 ```
 
+This can be useful when writing PDB files from your own data structures.
+
 
 ## RCSB PDB utility functions
 
@@ -479,6 +487,7 @@ viewstruc(struc['A'], surface=Surface(Dict("colorscheme"=> "greenCarbon")))
 
 ![viewstruc](viewstruc.png)
 
+Here they are shown as static images but they are interactive when using Bio3DView.jl.
 See the [Bio3DView.jl tutorial](http://nbviewer.jupyter.org/github/jgreener64/Bio3DView.jl/blob/master/examples/tutorial.ipynb) for more information.
 
 
@@ -508,7 +517,19 @@ for at in calphas
 end
 ```
 
-**C)** To show the Ramachandran phi/psi angle plot of a structure, if you have Plots installed:
+**C)** To find the residues at the interface of a protein-protein interaction:
+
+```julia
+for res_a in collectresidues(struc["A"], standardselector)
+    for res_b in collectresidues(struc["B"], standardselector)
+        if distance(res_a, res_b) < 5.0
+            println(resnumber(res_a), "A ", resnumber(res_b), "B")
+        end
+    end
+end
+```
+
+**D)** To show the Ramachandran phi/psi angle plot of a structure, if you have Plots installed:
 
 ```julia
 using Plots
@@ -525,7 +546,7 @@ scatter(rad2deg.(phi_angles),
      ylims=(-180, 180))
 ```
 
-**D)** To calculate the RMSD and displacements between the heavy (non-hydrogen) atoms of two models in an NMR structure:
+**E)** To calculate the RMSD and displacements between the heavy (non-hydrogen) atoms of two models in an NMR structure:
 
 ```julia
 downloadpdb("1SSU")
@@ -534,7 +555,7 @@ rmsd(struc_nmr[5], struc_nmr[10], heavyatomselector)
 displacements(struc_nmr[5], struc_nmr[10], heavyatomselector)
 ```
 
-**E)** To calculate the cysteine fraction of every structure in the PDB:
+**F)** To calculate the cysteine fraction of every structure in the PDB:
 
 ```julia
 l = pdbentrylist()
