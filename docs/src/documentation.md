@@ -198,7 +198,7 @@ julia> countresidues(struc, standardselector)
 85
 ```
 
-The sequence of a protein can be retrieved by passing a `Chain` or array of residues to `AminoAcidSequence`:
+The amino acid sequence of a protein can be retrieved by passing an element to `AminoAcidSequence` with optional residue selectors:
 
 ```julia
 julia> AminoAcidSequence(struc['A'], standardselector)
@@ -206,7 +206,52 @@ julia> AminoAcidSequence(struc['A'], standardselector)
 RCGSQGGGSTCPGLRCCSIWGWCGDSEPYCGRTCENKCWSGERSDHRCGAAVGNPPCGQDRCCSVHGWCGGGNDYCSGGNCQYRC
 ```
 
-See [BioSequences.jl](https://github.com/BioJulia/BioSequences.jl) for more on how to deal with sequences.
+The `gaps` keyword argument determines whether to add gaps to the sequence based on missing residue numbers (default `true`).
+See [BioSequences.jl](https://github.com/BioJulia/BioSequences.jl) and [BioAlignments.jl](https://github.com/BioJulia/BioAlignments.jl) for more on how to deal with sequences.
+For example, to see the alignment of CDK1 and CDK2 (this example also makes use of Julia's [broadcasting](https://docs.julialang.org/en/v1/manual/arrays/#Broadcasting-1)):
+
+```julia
+julia> struc1, struc2 = retrievepdb.(["4YC6", "1HCL"])
+2-element Array{ProteinStructure,1}:
+ ProteinStructure 4YC6.pdb with 1 models, 8 chains (A,B,C,D,E,F,G,H), 1420 residues, 12271 atoms
+ ProteinStructure 1HCL.pdb with 1 models, 1 chains (A), 294 residues, 2546 atoms
+
+julia> seq1, seq2 = AminoAcidSequence.([struc1["A"], struc2["A"]], standardselector, gaps=false)
+2-element Array{BioSequences.BioSequence{BioSequences.AminoAcidAlphabet},1}:
+ MEDYTKIEKIGEGTYGVVYKGRHKTTGQVVAMKKIRLES…SHVKNLDENGLDLLSKMLIYDPAKRISGKMALNHPYFND
+ MENFQKVEKIGEGTYGVVYKARNKLTGEVVALKKIRTEG…RSLLSQMLHYDPNKRISAKAALAHPFFQDVTKPVPHLRL
+
+julia> using BioAlignments
+
+julia> scoremodel = AffineGapScoreModel(BLOSUM62, gap_open=-10, gap_extend=-1);
+
+julia> alres = pairalign(GlobalAlignment(), seq1, seq2, scoremodel)
+PairwiseAlignmentResult{Int64,BioSequences.BioSequence{BioSequences.AminoAcidAlphabet},BioSequences.BioSequence{BioSequences.AminoAcidAlphabet}}:
+  score: 945
+  seq:   1 MEDYTKIEKIGEGTYGVVYKGRHKTTGQVVAMKKIRLESEEEGVPSTAIREISLLKELRH  60
+           ||   | ||||||||||||| | | || ||| |||| |    |||||||||||||||| |
+  ref:   1 MENFQKVEKIGEGTYGVVYKARNKLTGEVVALKKIRTE----GVPSTAIREISLLKELNH  56
+
+  seq:  61 PNIVSLQDVLMQDSRLYLIFEFLSMDLKKYLD-SIPPGQYMDSSLVKSYLYQILQGIVFC 119
+           |||| | ||      ||| ||||  ||||  | |   |      | |||| | |||  ||
+  ref:  57 PNIVKLLDVIHTENKLYLVFEFLHQDLKKFMDASALTG--IPLPLIKSYLFQLLQGLAFC 114
+
+  seq: 120 HSRRVLHRDLKPQNLLIDDKGTIKLADFGLARAFGV----YTHEVVTLWYRSPEVLLGSA 175
+           || ||||||||||||||   | ||||||||||||||    ||||||||||| || |||
+  ref: 115 HSHRVLHRDLKPQNLLINTEGAIKLADFGLARAFGVPVRTYTHEVVTLWYRAPEILLGCK 174
+
+  seq: 176 RYSTPVDIWSIGTIFAELATKKPLFHGDSEIDQLFRIFRALGTPNNEVWPEVESLQDYKN 235
+            ||| ||||| | ||||  |   || ||||||||||||| ||||   ||| | |  |||
+  ref: 175 YYSTAVDIWSLGCIFAEMVTRRALFPGDSEIDQLFRIFRTLGTPDEVVWPGVTSMPDYKP 234
+
+  seq: 236 TFPKWKPGSLASHVKNLDENGLDLLSKMLIYDPAKRISGKMALNHPYFND---------- 285
+            ||||        |  ||| |  ||| || ||| |||| | || || | |
+  ref: 235 SFPKWARQDFSKVVPPLDEDGRSLLSQMLHYDPNKRISAKAALAHPFFQDVTKPVPHLRL 294
+
+```
+
+In fact, `pairalign` is extended to carry out the above steps and return the alignment by calling `pairalign(struc1["A"], struc2["A"], standardselector)` in this case.
+`scoremodel` and `aligntype` are keyword arguments with the defaults shown above.
 
 
 ## Spatial calculations
@@ -232,11 +277,11 @@ Various functions are provided to calculate spatial quantities for proteins:
 | `showcontactmap`     | Print a representation of a `ContactMap` to `stdout` or a specified `IO` instance                |
 | `rmsd`               | RMSD between two elements of the same size - assumes they are superimposed                       |
 | `displacements`      | `Vector` of displacements between two elements of the same size - assumes they are superimposed  |
+| `MetaGraph`          | Construct a `MetaGraph` of contacting elements                                                   |
 
 The `omegaangle`, `phiangle` and `psiangle` functions can take either a pair of residues or a chain and a position.
 The `omegaangle` and `phiangle` functions measure the angle between the residue at the given index and the one before.
 The `psiangle` function measures between the given index and the one after.
-
 For example:
 
 ```julia
@@ -285,6 +330,33 @@ plot(dists)
 ```
 
 ![distancemap](distancemap.png)
+
+The contacting elements in a molecular structure form a graph, and this can be retrieved using `MetaGraph`.
+This extends `MetaGraph` from [MetaGraphs.jl](https://github.com/JuliaGraphs/MetaGraphs.jl), allowing you to use all the graph analysis tools in [LightGraphs.jl](https://github.com/JuliaGraphs/LightGraphs.jl).
+For example:
+
+```julia
+julia> mg = MetaGraph(collectatoms(struc["A"], cbetaselector), 8.0)
+{85, 423} undirected Int64 metagraph with Float64 weights defined by :weight (default weight 1.0)
+
+julia> using LightGraphs, MetaGraphs
+
+julia> nv(mg)
+85
+
+julia> ne(mg)
+423
+
+julia> get_prop(mg, :contactdist)
+8.0
+
+julia> mg[10, :element]
+Atom CB with serial 71, coordinates [-3.766, 4.031, 23.526]
+```
+
+See the [LightGraphs docs](https://juliagraphs.github.io/LightGraphs.jl/latest) for details on how to calculate properties such as shortest paths, centrality measures, community detection and more.
+Similar to `ContactMap`, contacts are found between any element type passed in.
+So if you wanted the graph of chain contacts in a protein complex you could give a `Model` as the first argument.
 
 
 ## Downloading PDB files
@@ -437,7 +509,6 @@ There are a few more functions that may be useful:
 
 | Function                 | Returns                                                                         | Return type                                                 |
 | :----------------------- | :------------------------------------------------------------------------------ | :---------------------------------------------------------- |
-| `pdbentrylist`           | List of all PDB entries from the RCSB server                                    | `Array{String,1}`                                           |
 | `pdbstatuslist`          | List of PDB entries from a specified RCSB weekly status list URL                | `Array{String,1}`                                           |
 | `pdbrecentchanges`       | Added, modified and obsolete PDB lists from the recent RCSB weekly status files | `Tuple{Array{String,1},Array{String,1},` `Array{String,1}}` |
 | `pdbobsoletelist`        | List of all obsolete PDB entries                                                | `Array{String,1}`                                           |
@@ -472,7 +543,7 @@ See the [Bio3DView.jl tutorial](http://nbviewer.jupyter.org/github/jgreener64/Bi
 
 A few further examples of BioStructures usage are given below.
 
-**A)** To plot the temperature factors of a protein, if you have Plots installed:
+**A)** Plot the temperature factors of a protein:
 
 ```julia
 using Plots
@@ -484,7 +555,7 @@ plot(resnumber.(calphas),
      label="")
 ```
 
-**B)** To print the PDB records for all C-alpha atoms within 5 Angstrom of residue 38:
+**B)** Print the PDB records for all C-alpha atoms within 5 Angstrom of residue 38:
 
 ```julia
 for at in calphas
@@ -494,7 +565,7 @@ for at in calphas
 end
 ```
 
-**C)** To find the residues at the interface of a protein-protein interaction:
+**C)** Find the residues at the interface of a protein-protein interaction:
 
 ```julia
 for res_a in collectresidues(struc["A"], standardselector)
@@ -506,7 +577,7 @@ for res_a in collectresidues(struc["A"], standardselector)
 end
 ```
 
-**D)** To show the Ramachandran phi/psi angle plot of a structure, if you have Plots installed:
+**D)** Show the Ramachandran phi/psi angle plot of a structure:
 
 ```julia
 using Plots
@@ -523,7 +594,7 @@ scatter(rad2deg.(phi_angles),
      ylims=(-180, 180))
 ```
 
-**E)** To calculate the RMSD and displacements between the heavy (non-hydrogen) atoms of two models in an NMR structure:
+**E)** Calculate the RMSD and displacements between the heavy (non-hydrogen) atoms of two models in an NMR structure:
 
 ```julia
 downloadpdb("1SSU")
@@ -532,7 +603,7 @@ rmsd(struc_nmr[5], struc_nmr[10], heavyatomselector)
 displacements(struc_nmr[5], struc_nmr[10], heavyatomselector)
 ```
 
-**F)** To calculate the cysteine fraction of every structure in the PDB:
+**F)** Calculate the cysteine fraction of every structure in the PDB:
 
 ```julia
 l = pdbentrylist()
@@ -546,4 +617,15 @@ for p in l
         end
     end
 end
+```
+
+**G)** Interoperability is possible with other packages in the [Julia ecosystem](https://pkg.julialang.org/docs).
+For example, use [NearestNeighbors.jl](https://github.com/KristofferC/NearestNeighbors.jl) to find the 10 nearest residues to each residue:
+
+```julia
+using NearestNeighbors
+struc = retrievepdb("1AKE")
+ca = coordarray(struc["A"], cbetaselector)
+kdtree = KDTree(ca; leafsize=10)
+idxs, dists = knn(kdtree, ca, 10, true)
 ```

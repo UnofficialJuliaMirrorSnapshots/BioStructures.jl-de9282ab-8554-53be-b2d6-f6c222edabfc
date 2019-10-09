@@ -3,7 +3,10 @@ module TestBioStructures
 using Test
 using Format
 using RecipesBase
+using LightGraphs
+using MetaGraphs
 using BioCore
+using BioAlignments
 using BioStructures
 using BioStructures:
     fixlists!,
@@ -699,8 +702,25 @@ end
         "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" *
         "XXXXXXXXXXXXXXX"
     )
+    seq = AminoAcidSequence(struc['B'], gaps=false)
+    @test seq == AminoAcidSequence(
+        "MRIILLGAPGAGKGTQAQFIMEKYGIPQISTGDMLRAAVKSGSELGKQAKDIMDAGKLVTDELVIALVKERIAQEDCRNG" *
+        "FLLDGFPRTIPQADAMKEAGINVDYVLEFDVPDELIVDRIVGRRVHAPSGRVYHVKFNPPKVEGKDDVTGEELTTRKDDQ" *
+        "EETVRKRLVEYHQMTAPLIGYYSKEAEAGNTKYAKVDGTKPVAEVRADLEKILGXXXXXXXXXXXXXXXXXXXXXXXXXX" *
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" *
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+    )
     seq = AminoAcidSequence(struc['B'], standardselector)
     @test seq == AminoAcidSequence(
+        "MRIILLGAPGAGKGTQAQFIMEKYGIPQISTGDMLRAAVKSGSELGKQAKDIMDAGKLVTDELVIALVKERIAQEDCRNG" *
+        "FLLDGFPRTIPQADAMKEAGINVDYVLEFDVPDELIVDRIVGRRVHAPSGRVYHVKFNPPKVEGKDDVTGEELTTRKDDQ" *
+        "EETVRKRLVEYHQMTAPLIGYYSKEAEAGNTKYAKVDGTKPVAEVRADLEKILG"
+    )
+    seq = AminoAcidSequence(struc, standardselector)
+    @test seq == AminoAcidSequence(
+        "MRIILLGAPGAGKGTQAQFIMEKYGIPQISTGDMLRAAVKSGSELGKQAKDIMDAGKLVTDELVIALVKERIAQEDCRNG" *
+        "FLLDGFPRTIPQADAMKEAGINVDYVLEFDVPDELIVDRIVGRRVHAPSGRVYHVKFNPPKVEGKDDVTGEELTTRKDDQ" *
+        "EETVRKRLVEYHQMTAPLIGYYSKEAEAGNTKYAKVDGTKPVAEVRADLEKILG" *
         "MRIILLGAPGAGKGTQAQFIMEKYGIPQISTGDMLRAAVKSGSELGKQAKDIMDAGKLVTDELVIALVKERIAQEDCRNG" *
         "FLLDGFPRTIPQADAMKEAGINVDYVLEFDVPDELIVDRIVGRRVHAPSGRVYHVKFNPPKVEGKDDVTGEELTTRKDDQ" *
         "EETVRKRLVEYHQMTAPLIGYYSKEAEAGNTKYAKVDGTKPVAEVRADLEKILG"
@@ -710,6 +730,28 @@ end
         Residue("ALA", 10, 'A', false, Chain('A')),
     ])
     @test seq == AminoAcidSequence("VA")
+
+    # Test pairwise alignment
+    res = collectresidues(struc["A"], standardselector)
+    alres = pairalign(res[1:40], res[21:60])
+    al = alignment(alres)
+    @test score(alres) == 40
+    @test count_matches(al) == 20
+    @test count_insertions(al) == 20
+    @test length(al) == 60
+    alres = pairalign(res[1:40], res[21:60], aligntype=LocalAlignment())
+    al = alignment(alres)
+    @test score(alres) == 100
+    @test count_matches(al) == 20
+    @test count_insertions(al) == 0
+    @test length(al) == 20
+    alres = pairalign(res[1:40], res[21:60],
+            scoremodel=AffineGapScoreModel(BLOSUM62, gap_open=-50, gap_extend=-1))
+    al = alignment(alres)
+    @test score(alres) == -29
+    @test count_matches(al) == 5
+    @test count_insertions(al) == 0
+    @test length(al) == 40
 end
 
 
@@ -2299,6 +2341,21 @@ end
 
     # Test the plot recipe
     RecipesBase.apply_recipe(Dict{Symbol, Any}(), dmap)
+
+
+    # Test atom graph constructor
+    cbetas = collectatoms(struc_1AKE["A"], cbetaselector)
+    mg = MetaGraph(cbetas, 8.0)
+    @test nv(mg) == 214
+    @test ne(mg) == 1027
+    @test get_prop(mg, :contactdist) == 8.0
+    @test mg[10, :element] == cbetas[10]
+
+    mg = MetaGraph(struc_1AKE[1], 10.0)
+    @test nv(mg) == 2
+    @test ne(mg) == 1
+    @test get_prop(mg, :contactdist) == 10.0
+    @test mg[2, :element] == struc_1AKE["B"]
 end
 
 # Delete temporary file

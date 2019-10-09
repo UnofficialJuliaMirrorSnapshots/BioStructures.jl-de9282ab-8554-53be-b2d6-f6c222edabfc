@@ -85,7 +85,8 @@ export
     notwaterselector,
     disorderselector,
     hydrogenselector,
-    AminoAcidSequence
+    AminoAcidSequence,
+    pairalign
 
 
 "A macromolecular structural element."
@@ -222,17 +223,16 @@ function Residue(name::AbstractString,
 end
 
 
-"A `StructuralElement` or `Vector` of `StructuralElement`s."
+"""
+A `StructuralElement` or `Vector` of `StructuralElement`s up to
+a `ProteinStructure`.
+"""
 const StructuralElementOrList = Union{
         StructuralElement,
         Vector{Model},
         Vector{Chain},
-        Vector{AbstractResidue},
-        Vector{Residue},
-        Vector{DisorderedResidue},
-        Vector{AbstractAtom},
-        Vector{Atom},
-        Vector{DisorderedAtom}
+        Vector{<:AbstractResidue},
+        Vector{<:AbstractAtom},
     }
 
 
@@ -1316,8 +1316,7 @@ end
 
 countresidues(ch::Chain) = length(ch)
 
-function countresidues(res_list::Union{Vector{AbstractResidue},
-        Vector{Residue}, Vector{DisorderedResidue}})
+function countresidues(res_list::Vector{<:AbstractResidue})
     return length(res_list)
 end
 
@@ -1338,7 +1337,7 @@ function collectatoms(struc::ProteinStructure)
 end
 
 function collectatoms(el::Union{Model, Chain, Vector{Model}, Vector{Chain},
-        Vector{AbstractResidue}, Vector{Residue}, Vector{DisorderedResidue}})
+                                Vector{<:AbstractResidue}})
     at_list = AbstractAtom[]
     for sub_el in el
         append!(at_list, collectatoms(sub_el))
@@ -1372,8 +1371,7 @@ end
 
 countatoms(res::AbstractResidue) = length(res)
 
-function countatoms(at_list::Union{Vector{AbstractAtom},
-        Vector{Atom}, Vector{DisorderedAtom}})
+function countatoms(at_list::Vector{<:AbstractAtom})
     return length(at_list)
 end
 
@@ -1707,13 +1705,14 @@ function hydrogenselector(at::AbstractAtom)
 end
 
 
-# For obtaining sequence we will re-order residues numerically
-function AminoAcidSequence(ch::Chain, residue_selectors::Function...)
-    return AminoAcidSequence(
-        sort(collectresidues(ch, residue_selectors...), by=resnumber))
+function AminoAcidSequence(el::Union{StructuralElement, Vector{Model},
+                                    Vector{Chain}, Vector{<:AbstractAtom}},
+                        residue_selectors::Function...;
+                        gaps::Bool=true)
+    return AminoAcidSequence(collectresidues(el, residue_selectors...); gaps=gaps)
 end
 
-function AminoAcidSequence(res::Vector{<:AbstractResidue})
+function AminoAcidSequence(res::Vector{<:AbstractResidue}; gaps::Bool=true)
     seq = BioSymbols.AminoAcid[]
     for i in 1:length(res)
         if haskey(BioSymbols.threeletter_to_aa, resname(res[i]))
@@ -1721,11 +1720,22 @@ function AminoAcidSequence(res::Vector{<:AbstractResidue})
         else
             push!(seq, BioSymbols.AA_X)
         end
-        if i+1 <= length(res) && resnumber(res[i+1]) - resnumber(res[i]) > 1
-            append!(seq, [BioSymbols.AA_Gap for _ in 1:(resnumber(res[i+1]) - resnumber(res[i]) - 1)])
+        # Add gaps based on missing residue numbers
+        if gaps && i + 1 <= length(res) && resnumber(res[i + 1]) - resnumber(res[i]) > 1 && chainid(res[i]) == chainid(res[i + 1])
+            append!(seq, [BioSymbols.AA_Gap for _ in 1:(resnumber(res[i + 1]) - resnumber(res[i]) - 1)])
         end
     end
     return AminoAcidSequence(seq)
+end
+
+function BioAlignments.pairalign(el1::StructuralElementOrList,
+                            el2::StructuralElementOrList,
+                            residue_selectors::Function...;
+                            scoremodel::AbstractScoreModel=AffineGapScoreModel(BLOSUM62, gap_open=-10, gap_extend=-1),
+                            aligntype::BioAlignments.AbstractAlignment=GlobalAlignment())
+    seq1 = AminoAcidSequence(el1, residue_selectors...; gaps=false)
+    seq2 = AminoAcidSequence(el2, residue_selectors...; gaps=false)
+    return pairalign(aligntype, seq1, seq2, scoremodel)
 end
 
 
