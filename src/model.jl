@@ -86,7 +86,8 @@ export
     disorderselector,
     hydrogenselector,
     AminoAcidSequence,
-    pairalign
+    pairalign,
+    DataFrame
 
 
 "A macromolecular structural element."
@@ -568,7 +569,8 @@ ishetero(dis_res::DisorderedResidue) = ishetero(defaultresidue(dis_res))
 Determines if an `AbstractAtom` is a `DisorderedAtom`, i.e. if there are
 multiple locations present for an atom.
 """
-isdisorderedatom(at::AbstractAtom) = isa(at, DisorderedAtom)
+isdisorderedatom(::Atom) = false
+isdisorderedatom(::DisorderedAtom) = true
 
 
 """
@@ -763,7 +765,8 @@ atoms(dis_res::DisorderedResidue) = atoms(defaultresidue(dis_res))
 Determine if an `AbstractResidue` is a `DisorderedResidue`, i.e. there are
 multiple residue names with the same residue ID.
 """
-isdisorderedres(res::AbstractResidue) = isa(res, DisorderedResidue)
+isdisorderedres(::Residue) = false
+isdisorderedres(::DisorderedResidue) = true
 
 
 """
@@ -1736,6 +1739,54 @@ function BioAlignments.pairalign(el1::StructuralElementOrList,
     seq1 = AminoAcidSequence(el1, residue_selectors...; gaps=false)
     seq2 = AminoAcidSequence(el2, residue_selectors...; gaps=false)
     return pairalign(aligntype, seq1, seq2, scoremodel)
+end
+
+
+# DataFrame constructors for interoperability
+function DataFrames.DataFrame(ats::Vector{<:AbstractAtom},
+                    atom_selectors::Function...)
+    df = DataFrame(ishetero=Bool[],
+                    serial=Int[],
+                    atomname=String[],
+                    altlocid=Char[],
+                    resname=String[],
+                    chainid=String[],
+                    resnumber=Int[],
+                    inscode=Char[],
+                    x=Float64[],
+                    y=Float64[],
+                    z=Float64[],
+                    occupancy=Float64[],
+                    tempfactor=Float64[],
+                    element=String[],
+                    charge=String[],
+                    modelnumber=Int[],
+                    isdisorderedatom=Bool[])
+    for a in collectatoms(ats, atom_selectors...)
+        push!(df, (ishetero(a), serial(a), atomname(a), altlocid(a), resname(a),
+                    chainid(a), resnumber(a), inscode(a), x(a), y(a), z(a),
+                    occupancy(a), tempfactor(a), element(a), charge(a),
+                    modelnumber(a), isdisorderedatom(a)))
+    end
+    return df
+end
+
+function DataFrames.DataFrame(res::Vector{<:AbstractResidue},
+                    residue_selectors::Function...)
+    df = DataFrame(ishetero=Bool[],
+                    resname=String[],
+                    chainid=String[],
+                    resnumber=Int[],
+                    inscode=Char[],
+                    countatoms=Int[],
+                    modelnumber=Int[],
+                    isdisorderedres=Bool[])
+    for r in collectresidues(res, residue_selectors...)
+        push!(df, (ishetero(r), resname(r), chainid(r), resnumber(r),
+                    inscode(r), countatoms(r), modelnumber(r),
+                    isdisorderedres(r)))
+    end
+    return df
 end
 
 
